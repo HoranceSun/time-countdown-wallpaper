@@ -1,0 +1,339 @@
+<!DOCTYPE html>
+<html lang="zh-CN">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0">
+<title>Time Countdown Wallpaper</title>
+<style>
+:root {
+  --bg-deep: #080d18;
+  --retire-color: #64b5f6;
+  --retire-glow: rgba(100,181,246,0.3);
+  --life-color: #fb923c;
+  --life-glow: rgba(251,146,60,0.25);
+  --text-primary: #e8ecf1;
+  --text-secondary: #8899aa;
+  --text-muted: #556677;
+  --font-main: 'Segoe UI', 'Microsoft YaHei', system-ui, sans-serif;
+  --font-mono: 'Cascadia Code', 'Consolas', monospace;
+}
+* { margin:0; padding:0; box-sizing:border-box; }
+html, body {
+  width:100%; height:100%; overflow:hidden;
+  background: var(--bg-deep);
+  font-family: var(--font-main);
+  color: var(--text-primary);
+  user-select: none;
+}
+
+/* Layers */
+.bg-layer {
+  position:fixed; inset:0; z-index:0;
+  background:
+    radial-gradient(ellipse 100% 60% at 30% 50%, rgba(13,71,161,0.15) 0%, transparent 50%),
+    radial-gradient(ellipse 80% 80% at 70% 50%, rgba(194,65,12,0.08) 0%, transparent 50%),
+    linear-gradient(170deg, #080d18 0%, #0f1a2c 40%, #111c30 55%, #0a0f1a 100%);
+}
+.grid-overlay {
+  position:fixed; inset:0; z-index:1; pointer-events:none;
+  background-image:
+    linear-gradient(rgba(255,255,255,0.012) 1px, transparent 1px),
+    linear-gradient(90deg, rgba(255,255,255,0.012) 1px, transparent 1px);
+  background-size: 60px 60px;
+  mask-image: radial-gradient(ellipse 80% 80% at 50% 50%, black 35%, transparent 75%);
+}
+
+/* Main layout — single screen, centered */
+.container {
+  position:relative; z-index:10;
+  width:100%; height:100%;
+  display:flex; flex-direction:column;
+  align-items:center; justify-content:center;
+  padding: 5vh 8vw;
+}
+
+/* Two-panel row */
+.panels {
+  display:flex; width:100%; max-width:1200px;
+  gap: 3vw; align-items:stretch; justify-content:center;
+}
+.panel {
+  flex:1; display:flex; flex-direction:column;
+  align-items:center; justify-content:center;
+  padding: 3vh 2vw; position:relative;
+  min-width:0;
+}
+.panel::before {
+  content:''; position:absolute; inset:8% 0; z-index:-1;
+  border-radius: 20px; opacity:0.25;
+}
+.panel.retire::before {
+  background: radial-gradient(ellipse at center, rgba(13,71,161,0.18), transparent 70%);
+  border: 1px solid rgba(13,71,161,0.1);
+}
+.panel.life::before {
+  background: radial-gradient(ellipse at center, rgba(194,65,12,0.13), transparent 70%);
+  border: 1px solid rgba(194,65,12,0.08);
+}
+
+/* Labels */
+.panel-label {
+  font-size: 1.1vw; letter-spacing: 0.35em;
+  text-transform: uppercase; margin-bottom: 1vh;
+  font-weight: 300; opacity:0.6;
+}
+.panel.retire .panel-label { color:#5b9bd5; }
+.panel.life .panel-label { color:#f59e0b; }
+.panel-subtitle {
+  font-size: 0.75vw; color: var(--text-muted);
+  margin-bottom: 1.5vh; white-space:nowrap;
+}
+
+/* Countdown numbers */
+.countdown {
+  display:flex; gap: 0.5vw; align-items:baseline;
+  flex-wrap:wrap; justify-content:center;
+}
+.count-unit {
+  display:flex; flex-direction:column; align-items:center;
+  min-width: 3.5vw;
+}
+.count-value {
+  font-family: var(--font-mono);
+  font-size: 4.5vw; font-weight:700; line-height:1;
+  text-shadow: 0 0 30px currentColor;
+}
+.panel.retire .count-value { color:#64b5f6; }
+.panel.life .count-value { color:#fb923c; }
+.count-label {
+  font-size: 0.7vw; color: var(--text-secondary);
+  letter-spacing: 0.15em; margin-top: 0.2vh;
+  text-transform: uppercase;
+}
+.count-sep {
+  font-size: 3vw; color: var(--text-muted);
+  font-weight:100; opacity:0.4; align-self:center;
+}
+
+/* Progress bars */
+.progress-section {
+  width:100%; max-width:1200px; margin-top: 2.5vh;
+}
+.progress-row {
+  display:flex; align-items:center; gap:1vw;
+  margin-bottom: 0.8vh; font-size:0.7vw;
+}
+.progress-label {
+  color: var(--text-secondary);
+  white-space:nowrap; min-width:5vw; text-align:right;
+  letter-spacing:0.05em;
+}
+.progress-bar-wrap {
+  flex:1; height:4px; background:rgba(255,255,255,0.05);
+  border-radius:10px; overflow:hidden;
+}
+.progress-bar-fill {
+  height:100%; border-radius:10px;
+  transition: width 1s ease-out;
+}
+.progress-bar-fill.retire-fill {
+  background: linear-gradient(90deg, #0d47a1, #1e88e5);
+  box-shadow: 0 0 6px rgba(30,136,229,0.25);
+}
+.progress-bar-fill.life-fill {
+  background: linear-gradient(90deg, #c2410c, #f59e0b);
+  box-shadow: 0 0 6px rgba(245,158,11,0.25);
+}
+.progress-pct {
+  color: var(--text-secondary);
+  font-family: var(--font-mono); font-size:0.7vw;
+  min-width:3vw; text-align:left;
+}
+
+/* Status bar */
+.status-bar {
+  width:100%; max-width:1200px;
+  display:flex; justify-content:space-between; align-items:center;
+  margin-top: 1.5vh; padding-top: 1vh;
+  border-top: 1px solid rgba(255,255,255,0.03);
+  font-size:0.65vw; color: var(--text-muted);
+  letter-spacing:0.05em;
+}
+.status-item { display:flex; gap:0.4em; }
+.status-label { opacity:0.5; }
+.status-value { font-family: var(--font-mono); color: var(--text-secondary); }
+
+/* Warning pulse */
+@keyframes pulseWarn {
+  0%,100% { opacity:0.25; }
+  50% { opacity:0.45; }
+}
+.panel.life.warning::before { animation: pulseWarn 3s ease-in-out infinite; }
+</style>
+</head>
+<body>
+
+<div class="bg-layer"></div>
+<div class="grid-overlay"></div>
+
+<div class="container">
+
+  <div class="panels">
+    <div class="panel retire" id="retirePanel">
+      <div class="panel-label">退 休 倒 计 时</div>
+      <div class="countdown">
+        <div class="count-unit"><span class="count-value" id="retY">--</span><span class="count-label">年</span></div>
+        <span class="count-sep">:</span>
+        <div class="count-unit"><span class="count-value" id="retD">--</span><span class="count-label">天</span></div>
+        <span class="count-sep">:</span>
+        <div class="count-unit"><span class="count-value" id="retH">--</span><span class="count-label">时</span></div>
+        <span class="count-sep">:</span>
+        <div class="count-unit"><span class="count-value" id="retM">--</span><span class="count-label">分</span></div>
+        <span class="count-sep">:</span>
+        <div class="count-unit"><span class="count-value" id="retS">--</span><span class="count-label">秒</span></div>
+      </div>
+    </div>
+
+    <div class="panel life" id="lifePanel">
+      <div class="panel-label">生 命 倒 计 时</div>
+      <div class="countdown">
+        <div class="count-unit"><span class="count-value" id="lifY">--</span><span class="count-label">年</span></div>
+        <span class="count-sep">:</span>
+        <div class="count-unit"><span class="count-value" id="lifD">--</span><span class="count-label">天</span></div>
+        <span class="count-sep">:</span>
+        <div class="count-unit"><span class="count-value" id="lifH">--</span><span class="count-label">时</span></div>
+        <span class="count-sep">:</span>
+        <div class="count-unit"><span class="count-value" id="lifM">--</span><span class="count-label">分</span></div>
+        <span class="count-sep">:</span>
+        <div class="count-unit"><span class="count-value" id="lifS">--</span><span class="count-label">秒</span></div>
+      </div>
+    </div>
+  </div>
+
+  <div class="progress-section">
+    <div class="progress-row">
+      <span class="progress-label">退休进度</span>
+      <div class="progress-bar-wrap"><div class="progress-bar-fill retire-fill" id="retireBar"></div></div>
+      <span class="progress-pct" id="retirePct">0%</span>
+    </div>
+    <div class="progress-row">
+      <span class="progress-label">生命进度</span>
+      <div class="progress-bar-wrap"><div class="progress-bar-fill life-fill" id="lifeBar"></div></div>
+      <span class="progress-pct" id="lifePct">0%</span>
+    </div>
+  </div>
+
+  <div class="status-bar">
+    <div class="status-item"><span class="status-label">出生</span><span class="status-value">1987-10-26</span></div>
+    <div class="status-item"><span class="status-label">年龄</span><span class="status-value" id="currentAge">--</span></div>
+    <div class="status-item"><span class="status-label">退休</span><span class="status-value">2050-10-26</span></div>
+    <div class="status-item"><span class="status-label">百岁</span><span class="status-value">2087-10-26</span></div>
+    <div class="status-item"><span class="status-label">距退休</span><span class="status-value" id="daysToRetire">--</span></div>
+    <div class="status-item"><span class="status-label">剩余</span><span class="status-value" id="daysToDeath">--</span></div>
+  </div>
+
+</div>
+
+<script>
+(function() {
+  'use strict';
+
+  var BIRTH = new Date('1987-10-26T00:00:00+08:00');
+  var RETIRE = new Date('2050-10-26T00:00:00+08:00');
+  var DEATH = new Date('2087-10-26T00:00:00+08:00');
+  var TOTAL_LIFE = DEATH - BIRTH;
+
+  var els = {
+    retY: document.getElementById('retY'), retD: document.getElementById('retD'),
+    retH: document.getElementById('retH'), retM: document.getElementById('retM'),
+    retS: document.getElementById('retS'),
+    lifY: document.getElementById('lifY'), lifD: document.getElementById('lifD'),
+    lifH: document.getElementById('lifH'), lifM: document.getElementById('lifM'),
+    lifS: document.getElementById('lifS'),
+    retireBar: document.getElementById('retireBar'), retirePct: document.getElementById('retirePct'),
+    lifeBar: document.getElementById('lifeBar'), lifePct: document.getElementById('lifePct'),
+    currentAge: document.getElementById('currentAge'),
+    daysToRetire: document.getElementById('daysToRetire'),
+    daysToDeath: document.getElementById('daysToDeath'),
+    lifePanel: document.getElementById('lifePanel')
+  };
+
+  function pad(n, d) { d = d || 2; var s = String(n); while (s.length < d) s = '0' + s; return s; }
+
+  function getParts(ms) {
+    if (ms <= 0) return { y:0, d:0, h:0, m:0, s:0, totalDays:0 };
+    var sec = Math.floor(ms / 1000);
+    var s = sec % 60; sec = Math.floor(sec / 60);
+    var m = sec % 60; sec = Math.floor(sec / 60);
+    var h = sec % 24;
+    var days = Math.floor(sec / 24);
+    var y = Math.floor(days / 365.25);
+    var d = Math.floor(days - y * 365.25);
+    return { y:y, d:d, h:h, m:m, s:s, totalDays:days };
+  }
+
+  function tick() {
+    var now = Date.now();
+
+    var toRetire = RETIRE - now;
+    var r = getParts(toRetire < 0 ? 0 : toRetire);
+    els.retY.textContent = pad(r.y);
+    els.retD.textContent = pad(r.d, 3);
+    els.retH.textContent = pad(r.h);
+    els.retM.textContent = pad(r.m);
+    els.retS.textContent = pad(r.s);
+
+    var toDeath = DEATH - now;
+    var l = getParts(toDeath < 0 ? 0 : toDeath);
+    els.lifY.textContent = pad(l.y);
+    els.lifD.textContent = pad(l.d, 3);
+    els.lifH.textContent = pad(l.h);
+    els.lifM.textContent = pad(l.m);
+    els.lifS.textContent = pad(l.s);
+
+    var lifeLived = now - BIRTH;
+    var retirePct = Math.min(100, (lifeLived / (RETIRE - BIRTH)) * 100);
+    var lifePct = Math.min(100, (lifeLived / TOTAL_LIFE) * 100);
+    els.retireBar.style.width = retirePct.toFixed(2) + '%';
+    els.retirePct.textContent = retirePct.toFixed(1) + '%';
+    els.lifeBar.style.width = lifePct.toFixed(2) + '%';
+    els.lifePct.textContent = lifePct.toFixed(1) + '%';
+
+    if (lifePct > 60) {
+      els.lifePanel.classList.add('warning');
+    } else {
+      els.lifePanel.classList.remove('warning');
+    }
+
+    var ageYears = lifeLived / (365.25 * 24 * 3600 * 1000);
+    els.currentAge.textContent = ageYears.toFixed(8) + ' 岁';
+    els.daysToRetire.textContent = r.totalDays.toLocaleString() + ' 天';
+    els.daysToDeath.textContent = l.totalDays.toLocaleString() + ' 天';
+  }
+
+  // Single interval — no duplicates
+  var timer = null;
+
+  function start() {
+    if (timer !== null) return;
+    tick();
+    timer = setInterval(tick, 1000);
+  }
+
+  function stop() {
+    if (timer === null) return;
+    clearInterval(timer);
+    timer = null;
+  }
+
+  document.addEventListener('visibilitychange', function() {
+    if (document.hidden) { stop(); }
+    else { start(); }
+  });
+
+  start();
+})();
+</script>
+
+</body>
+</html>
